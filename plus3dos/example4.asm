@@ -6,7 +6,7 @@ DOS_READ:	equ 0x0112	; +3DOS file-read routine
 	
 	org 0x8000
 
-	jp EXAMPLE_2
+	jp EXAMPLE_4
 
 include "plus3dos_utils.asm"
 	
@@ -16,7 +16,7 @@ include "plus3dos_utils.asm"
 	;; On entry, system is assumed to be in +3BASIC memory
 	;; configuration -- e.g., as when calling with USR()
 	;; -------------------------------------------------------------
-EXAMPLE_2:	
+EXAMPLE_4:	
 	;; Move stack into middle of address range, for +3DOS
 	di
 	ld (OLD_SP),sp		; Save Stack Pointer
@@ -38,9 +38,9 @@ EXAMPLE_2:
 
 	;; Read data into screen memory
 	ld b, 0x00		; File #00
-	ld c, 0x00		; Put RAM0 at top of memory
+	ld c, 0x07		; Put RAM0 at top of memory
 	ld de, 0x1B00		; Length of screen buffer
-	ld hl, 0x4000		; Address to read to
+	ld hl, 0xC000		; Address to read to
 
 	call DOS_READ
 
@@ -51,6 +51,36 @@ EXAMPLE_2:
 	call DOS_CLOSE
 
 	jr nc, EXIT_1		; Skip forward if error
+
+	;; Display alternative screen
+	ld a, (BANKM)		; Retrieve current mem config
+	xor %00001000		; Switch screen
+	ld (BANKM), a		; Save it
+
+	ld bc, MEM_PORT_1	; Make change
+	di
+	out (c), a
+	ei
+
+	;; Pause to admire the screen
+	ld bc, 500 		; Will be roughly 10 seconds
+LOOP:	dec bc
+	halt 
+	ld a,b
+	or c
+	jr nz, LOOP
+
+	;; Restore primary screen
+	ld a, (BANKM)		; Retrieve current mem config
+	xor %00001000		; Switch screen
+	ld (BANKM), a		; Save it
+
+	ld bc, MEM_PORT_1	; Make change
+	di
+	out (c), a
+	ei
+
+	scf
 
 	ld bc, 0x0000		; Indicates success
 	
@@ -87,4 +117,4 @@ OLD_SP:	dw 0x0000
 FILENAME:
 	db "jetpac.scr", 0xFF	; Loading screen
 
-END_EXAMPLE_2:	
+END_EXAMPLE_4:	

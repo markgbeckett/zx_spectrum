@@ -3,20 +3,21 @@ MEM_PORT_1:	equ 0x7FFD	; Memory-control port
 DOS_OPEN:	equ 0x0106	; +3DOS file-open routine
 DOS_CLOSE:	equ 0x0109	; +3DOS close-file routine
 DOS_READ:	equ 0x0112	; +3DOS file-read routine
-	
+DOS_SET_POSITION:	equ 0x0136		; +3DOS set file pointer	
 	org 0x8000
 
-	jp EXAMPLE_2
+	jp EXAMPLE_3
 
 include "plus3dos_utils.asm"
 	
 	;; -------------------------------------------------------------
-	;; Example of loading a screen into memory.
+	;; Example of loading only attribute data from screen file into
+	;; memory.
 	;; 
 	;; On entry, system is assumed to be in +3BASIC memory
 	;; configuration -- e.g., as when calling with USR()
 	;; -------------------------------------------------------------
-EXAMPLE_2:	
+EXAMPLE_3:	
 	;; Move stack into middle of address range, for +3DOS
 	di
 	ld (OLD_SP),sp		; Save Stack Pointer
@@ -36,11 +37,20 @@ EXAMPLE_2:
 
 	jr nc, EXIT_1		; Skip forward if error
 
+	;; Move file pointer to start of attributes
+	ld b,0			; File number 0
+	ld e,b			; High byte of file pointer is 0
+	ld hl, 0x1880		; 0x80 for header plus
+				; 0x1800 for pixel data
+	call DOS_SET_POSITION	; Set file pointer
+	
+	jr nc, EXIT_1		; Check for error
+		
 	;; Read data into screen memory
 	ld b, 0x00		; File #00
 	ld c, 0x00		; Put RAM0 at top of memory
-	ld de, 0x1B00		; Length of screen buffer
-	ld hl, 0x4000		; Address to read to
+	ld de, 0x0300		; Length of attributes
+	ld hl, 0x5800		; Address to read to
 
 	call DOS_READ
 
@@ -87,4 +97,4 @@ OLD_SP:	dw 0x0000
 FILENAME:
 	db "jetpac.scr", 0xFF	; Loading screen
 
-END_EXAMPLE_2:	
+END_EXAMPLE_3:	
